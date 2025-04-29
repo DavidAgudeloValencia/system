@@ -10,15 +10,12 @@ class UserController extends Controller
 {
     public function index()
     {
-        $users = User::all();
-        return inertia('Users/Index', [
-            'users' => $users,
-        ]);
+        //
     }
 
     public function create()
     {
-        return inertia('Users/Create');
+        //
     }
 
     public function edit($id)
@@ -29,7 +26,7 @@ class UserController extends Controller
             return redirect()->route('users.index')->with('error', 'User not found.');
         }
 
-        return inertia('Users/Edit', [
+        return Inertia::render('Users/Edit', [
             'user' => $user,
         ]);
     }
@@ -89,7 +86,7 @@ class UserController extends Controller
         }
 
         $user->delete();
-
-        return response()->json(['message' => 'User deleted successfully']);
+        return redirect()->back()
+        ->with('message', 'User deleted successfully.');
     }
 }
