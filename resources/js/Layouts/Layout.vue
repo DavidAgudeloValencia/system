@@ -8,6 +8,9 @@ import DropdownLink from '@/Components/DropdownLink.vue';
 import NavLink from '@/Components/NavLink.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 
+const showingNavigationDropdown = ref(false);
+
+
 </script>
 
 <template>
@@ -24,16 +27,22 @@ import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
                         <div class="flex">
                             <!-- Logo -->
                             <div class="shrink-0 flex items-center">
-                                <Link :href="route('users')">
-                                    <ApplicationMark class="block h-9 w-auto" />
+                                <Link :href="route('users.index')">
+                                    <ApplicationMark class="block h-7 w-auto" />
                                 </Link>
                             </div>
 
                             <!-- Navigation Links -->
                             <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                                <NavLink :href="route('users')" :active="route().current('dashboard')">
+                                <NavLink :href="route('users.index')" :active="route().current('users.index')">
                                     Usuarios
                                 </NavLink>
+                                <NavLink :href="route('surveys.index')" :active="route().current('surveys.index')">
+                                    Encuestas
+                                </NavLink>
+                                <!-- <NavLink :href="route('reports.index')" :active="route().current('reports.index')">
+                                    Reportes
+                                </NavLink> -->
                             </div>
                         </div>
 
@@ -66,14 +75,27 @@ import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
                     </div>
                 </div>
 
+
                 <!-- Responsive Navigation Menu -->
                 <div :class="{'block': showingNavigationDropdown, 'hidden': ! showingNavigationDropdown}" class="sm:hidden">
-                    <div class="pt-2 pb-3 space-y-1">
-                        <ResponsiveNavLink :href="route('users')" :active="route().current('dashboard')">
-                            Usuarios
-                        </ResponsiveNavLink>
-                    </div>
+                    <!-- Responsive Settings Options -->
+                    <div class="pt-4 pb-1 border-t border-gray-200">
 
+                        <div class="mt-3 space-y-1">
+                            <ResponsiveNavLink :href="route('users.index')" :active="route().current('users.index')">
+                                Usuarios
+                            </ResponsiveNavLink>
+
+                            <ResponsiveNavLink :href="route('surveys.index')" :active="route().current('surveys.index')">
+                                Encuestas
+                            </ResponsiveNavLink>
+
+                            <!-- <ResponsiveNavLink :href="route('reports.index')" :active="route().current('reports.index')">
+                                Reportes
+                            </ResponsiveNavLink> -->
+
+                        </div>
+                    </div>
                 </div>
             </nav>
             <!-- Page Content -->
