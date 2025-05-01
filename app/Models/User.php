@@ -17,7 +17,7 @@ class User extends Authenticatable
      */
     protected $fillable = ['name', 'email', 'user_document', 'apartment'];
 
-    // Relationship with the answers
+    // Relación con las respuestas
     public function answers()
     {
         return $this->hasMany(Answer::class, 'user_id');

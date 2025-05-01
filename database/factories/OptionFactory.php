@@ -22,8 +22,8 @@ class OptionFactory extends Factory
     public function definition(): array
     {
         return [
-            'option' => $this->faker->sentence(3), // Option text
-            'question_id' => Question::factory(),  // Relation to the question
+            'option' => $this->faker->sentence(3),
+            'question_id' => Question::factory(),
         ];
     }
 }

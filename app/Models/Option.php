@@ -12,13 +12,13 @@ class Option extends Model
     protected $table = 'survey_options';
     protected $fillable = ['option', 'question_id'];
 
-    // Relation to the question
+    // Relación con la pregunta
     public function question()
     {
         return $this->belongsTo(Question::class, 'question_id');
     }
 
-    // Relationship with the answers
+    // Relación con las respuestas
     public function answers()
     {
         return $this->hasMany(Answer::class, 'option_id');

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Question;
 use App\Models\Option;
+use App\Models\Survey;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -48,7 +49,14 @@ class QuestionController extends Controller
                 }
             }
 
-            return response()->json(['success' => true, 'message' => 'Preguntas y opciones guardadas exitosamente.']);
+            // Obtener las encuestas actualizadas con preguntas y opciones
+            $surveys = Survey::with('questions.options')->get();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Preguntas y opciones guardadas exitosamente.',
+                'surveys' => $surveys,
+            ]);
         } catch (\Exception $e) {
             Log::error('Error al guardar preguntas y opciones: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Error al guardar preguntas y opciones.'], 500);
@@ -66,13 +74,27 @@ class QuestionController extends Controller
                 'questions.*.options.*.option' => 'required|string|max:255',
             ]);
 
-            // Eliminar todas las preguntas y opciones asociadas a la encuesta
+            // Obtener el ID de la encuesta
             $surveyId = $validatedData['questions'][0]['survey_id'];
+
+            // Verificar si alguna pregunta u opción tiene respuestas asociadas
+            $questionsWithAnswers = Question::where('survey_id', $surveyId)
+                ->whereHas('answers')
+                ->exists();
+
+            if ($questionsWithAnswers) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pueden actualizar las preguntas porque ya tienen respuestas asociadas.',
+                ], 400);
+            }
+
+            // Eliminar todas las preguntas y opciones asociadas a la encuesta
             $questionsToDelete = Question::where('survey_id', $surveyId)->get();
 
             foreach ($questionsToDelete as $question) {
-                $question->options()->delete(); // Eliminar las opciones asociadas
-                $question->delete(); // Eliminar la pregunta
+                $question->options()->delete();
+                $question->delete();
             }
 
             // Crear las nuevas preguntas y opciones
@@ -90,15 +112,13 @@ class QuestionController extends Controller
                 }
             }
 
-            // Obtener las preguntas actualizadas con sus opciones
-            $updatedQuestions = Question::where('survey_id', $surveyId)
-                ->with('options')
-                ->get();
+            // Obtener las encuestas actualizadas con preguntas y opciones
+            $surveys = Survey::with('questions.options')->get();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Preguntas y opciones actualizadas exitosamente.',
-                'questions' => $updatedQuestions,
+                'surveys' => $surveys,
             ]);
         } catch (\Exception $e) {
             Log::error('Error al actualizar preguntas y opciones: ' . $e->getMessage());
@@ -109,5 +129,27 @@ class QuestionController extends Controller
     public function destroy($id)
     {
         ///
+    }
+
+    public function getUserAnswers(Request $request, $userId, $surveyId)
+    {
+        try {
+            // Obtener las respuestas del usuario para una encuesta específica
+            $answers = Question::with(['options', 'answers' => function ($query) use ($userId) {
+                $query->where('user_id', $userId);
+            }])
+            ->whereHas('answers', function ($query) use ($userId, $surveyId) {
+                $query->where('user_id', $userId)->where('survey_id', $surveyId);
+            })
+            ->get();
+
+            return response()->json([
+                'success' => true,
+                'answers' => $answers,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error al obtener las respuestas del usuario: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error al obtener las respuestas del usuario.'], 500);
+        }
     }
 }

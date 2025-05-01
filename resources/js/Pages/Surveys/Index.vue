@@ -5,9 +5,9 @@ import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import Checkbox from '@/Components/Checkbox.vue';
 import { Head, useForm } from '@inertiajs/inertia-vue3';
-import { Inertia } from '@inertiajs/inertia';
+import axios from 'axios';
 
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import {
     TransitionRoot,
     TransitionChild,
@@ -22,8 +22,8 @@ import { PlusIcon, MinusIcon } from '@heroicons/vue/24/solid';
 
 const props = defineProps({
     surveys: {
-        type: Object,
-        default: () => ({}),
+        type: Array,
+        default: () => [],
     },
 });
 
@@ -32,6 +32,27 @@ const isOpenNoti = ref(false);
 const isOpenQuestions = ref(false); // Estado para el modal de preguntas
 const currentSurvey = ref({}); // Encuesta actual para editar preguntas
 const questions = ref([]); // Preguntas y opciones
+const surveys = ref([...props.surveys]); // Crear un ref para manejar las encuestas localmente
+
+// Observar cambios en los props y sincronizar con el estado local
+watch(() => props.surveys, (newSurveys) => {
+    surveys.value = [...newSurveys];
+});
+
+// Estado para las notificaciones
+const notification = ref({
+    message: '',
+    type: '', // 'success' o 'error'
+    visible: false,
+});
+
+// Método para mostrar notificaciones
+function showNotification(message, type = 'success') {
+    notification.value = { message, type, visible: true };
+    setTimeout(() => {
+        notification.value.visible = false;
+    }, 3000); // Ocultar la notificación después de 3 segundos
+}
 
 function closeModal() {
     isOpen.value = false;
@@ -123,17 +144,14 @@ async function submitQuestions() {
 
         // Verificar la respuesta del backend
         if (response.data.success) {
-            console.log('Preguntas y opciones actualizadas exitosamente:', response.data);
-
-            // Recargar los datos del servidor
-            Inertia.reload({ only: ['surveys'] });
-
+            surveys.value = response.data.surveys; // Actualizar los props con las encuestas actualizadas
+            showNotification('Preguntas y opciones actualizadas exitosamente.', 'success');
             closeQuestionsModal();
         } else {
-            console.error('Error al actualizar las preguntas:', response.data.message);
+            showNotification('Error al actualizar las preguntas.', 'error');
         }
     } catch (error) {
-        console.error('Error al enviar las preguntas:', error);
+        showNotification('Error al enviar las preguntas.', 'error');
     }
 }
 
@@ -143,28 +161,45 @@ const form = useForm({
     state: false,
 });
 
-const submitCreate = () => {
-    if (form.id == 0) {
-        form.post(route("surveys.store"), {
-            onSuccess: () => {
+const submitCreate = async () => {
+    try {
+        if (form.id == 0) {
+            const response = await axios.post(route('surveys.store'), form);
+            if (response.status === 200) {
+                surveys.value = response.data.surveys; // Actualizar la lista de encuestas
                 isOpen.value = false;
-                Inertia.reload({ only: ['surveys'] });
-            },
-        });
-    } else {
-        form.patch(route("surveys.update"), {
-            onSuccess: () => {
+                showNotification('Encuesta creada exitosamente.', 'success');
+            } else {
+                showNotification('Ocurrió un error al crear la encuesta.', 'error');
+            }
+        } else {
+            const response = await axios.patch(route('surveys.update'), form);
+            if (response.status === 200) {
+                surveys.value = response.data.surveys; // Actualizar la lista de encuestas
                 isOpen.value = false;
-                Inertia.reload({ only: ['surveys'] });
-            },
-        });
+                showNotification('Encuesta actualizada exitosamente.', 'success');
+            } else {
+                showNotification('Ocurrió un error al actualizar la encuesta.', 'error');
+            }
+        }
+    } catch (error) {
+        showNotification('Ocurrió un error al procesar la solicitud.', 'error');
     }
 };
 
-const submitDelete = () => {
-    form.delete(route("surveys.destroy"), {
-        onSuccess: () => isOpenNoti.value = false,
-    });
+const submitDelete = async () => {
+    try {
+        const response = await axios.delete(route('surveys.destroy'), { data: { id: form.id } });
+        if (response.status === 200) {
+            surveys.value = response.data.surveys; // Actualizar la lista de encuestas
+            isOpenNoti.value = false;
+            showNotification('Encuesta eliminada exitosamente.', 'success');
+        } else {
+            showNotification('Ocurrió un error al eliminar la encuesta.', 'error');
+        }
+    } catch (error) {
+        showNotification('Ocurrió un error al eliminar la encuesta.', 'error');
+    }
 };
 </script>
 
@@ -173,6 +208,11 @@ const submitDelete = () => {
     <Head title="surveys" />
 
     <Layout>
+        <!-- Notificación -->
+        <div v-if="notification.visible" :class="['fixed top-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg', notification.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white']">
+            {{ notification.message }}
+        </div>
+
         <div class="mt-4 flex justify-center">
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">Registro de encuestas</h2>
         </div>
@@ -203,7 +243,7 @@ const submitDelete = () => {
                             </div>
                             <div class="mt-4 flex justify-between">
                                 <button type="button"
-                                    class="inline-flex justify-center shadow rounded-full border bg-primary px-8 py-2 text-sm font-medium text-white hover:bg-teal-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                                    class="inline-flex justify-center shadow rounded-full border bg-primary px-8 py-2 text-sm font-medium text-white hover:bg-blue-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                                     @click="editModal(survey, survey.id)">
                                     Editar
                                 </button>
@@ -226,7 +266,7 @@ const submitDelete = () => {
             <!-- Botón para agregar encuesta -->
             <div class="fixed top-[80vh] right-1 inline-block p-1">
                 <button @click="openModal"
-                    class="bg-primary text-white active:bg-teal-900 font-bold uppercase text-xs px-2 py-2 rounded-full shadow hover:shadow-md outline-none focus:outline-none mr-1 mb-1 ease-linear transition-all duration-150"
+                    class="bg-primary text-white active:bg-blue-900 font-bold uppercase text-xs px-2 py-2 rounded-full shadow hover:shadow-md outline-none focus:outline-none mr-1 mb-1 ease-linear transition-all duration-150"
                     type="button">
                     <PlusIcon class="h-5 w-5 text-white transition duration-150 ease-in-out group-hover:text-opacity-80"
                         aria-hidden="true" />
@@ -248,7 +288,7 @@ const submitDelete = () => {
                                 enter-to="opacity-100 scale-100" leave="duration-200 ease-in"
                                 leave-from="opacity-100 scale-100" leave-to="opacity-0 scale-95">
                                 <DialogPanel
-                                    class="w-full max-w-md transform overflow-hidden rounded-2xl bg-muted p-8 text-left align-middle shadow-xl transition-all">
+                                    class="w-full max-w-md transform overflow-hidden rounded-2xl bg-muted p-8 text-left align-middle shadow-xl transition-all max-h-[80vh] overflow-y-auto">
                                     <div class="mt-2">
                                         <InputLabel for="name" value="Nombre" class="text-white" />
                                         <TextInput id="name" type="text" class="mt-1 block w-full p-2"
@@ -275,7 +315,7 @@ const submitDelete = () => {
                                             Cerrar
                                         </button>
                                         <button type="button"
-                                            class="inline-flex justify-center rounded-full border border-transparent bg-primary px-6 py-2 text-sm font-medium text-white hover:bg-teal-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                                            class="inline-flex justify-center rounded-full border border-transparent bg-primary px-6 py-2 text-sm font-medium text-white hover:bg-blue-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                                             @click="submitCreate">
                                             Guardar
                                         </button>
@@ -302,7 +342,7 @@ const submitDelete = () => {
                                 enter-to="opacity-100 scale-100" leave="duration-200 ease-in"
                                 leave-from="opacity-100 scale-100" leave-to="opacity-0 scale-95">
                                 <DialogPanel
-                                    class="w-full max-w-md transform overflow-hidden rounded-2xl bg-muted p-6 text-left align-middle shadow-xl transition-all">
+                                    class="w-full max-w-md transform overflow-hidden rounded-2xl bg-muted p-6 text-left align-middle shadow-xl transition-all max-h-[80vh] overflow-y-auto">
                                     <DialogTitle as="h3" class="text-xl font-medium leading-6 text-gray-100">
                                         <div>
                                             Confirmación
@@ -312,6 +352,8 @@ const submitDelete = () => {
                                         <p class="text-white text-lg">
                                             ¿Estás seguro de que deseas borrar la encuesta?
                                         </p>
+                                        <span class="font-semibold text-sm text-white">*Si continúas, perderás toda la
+                                            información asociada a las respuestas enviadas.</span>
                                     </div>
                                     <div class="mt-4 flex justify-between">
                                         <button type="button"
@@ -320,7 +362,7 @@ const submitDelete = () => {
                                             Cancelar
                                         </button>
                                         <button type="button"
-                                            class="inline-flex justify-center rounded-full border border-transparent bg-primary px-6 py-2 text-sm font-medium text-white hover:bg-teal-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                                            class="inline-flex justify-center rounded-full border border-transparent bg-primary px-6 py-2 text-sm font-medium text-white hover:bg-blue-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                                             @click="submitDelete">
                                             Aceptar
                                         </button>
@@ -335,19 +377,15 @@ const submitDelete = () => {
             <!-- Modal Questions -->
             <TransitionRoot appear :show="isOpenQuestions" as="template">
                 <Dialog as="div" @close="closeQuestionsModal" class="relative z-10">
-                    <TransitionChild as="template" enter="duration-300 ease-out" enter-from="opacity-0"
-                        enter-to="opacity-100" leave="duration-200 ease-in" leave-from="opacity-100"
-                        leave-to="opacity-0">
+                    <TransitionChild as="template" enter="duration-300 ease-out" enter-from="opacity-0" enter-to="opacity-100" leave="duration-200 ease-in" leave-from="opacity-100" leave-to="opacity-0">
                         <div class="fixed inset-0 bg-black bg-opacity-25" />
                     </TransitionChild>
 
                     <div class="fixed inset-0 overflow-y-auto">
                         <div class="flex min-h-full items-center justify-center p-4 text-center">
-                            <TransitionChild as="template" enter="duration-300 ease-out" enter-from="opacity-0 scale-95"
-                                enter-to="opacity-100 scale-100" leave="duration-200 ease-in"
-                                leave-from="opacity-100 scale-100" leave-to="opacity-0 scale-95">
+                            <TransitionChild as="template" enter="duration-300 ease-out" enter-from="opacity-0 scale-95" enter-to="opacity-100 scale-100" leave="duration-200 ease-in" leave-from="opacity-100 scale-100" leave-to="opacity-0 scale-95">
                                 <DialogPanel
-                                    class="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-muted p-8 text-left align-middle shadow-xl transition-all">
+                                    class="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-muted p-10 py-8 text-left align-middle shadow-xl transition-all max-h-[80vh] overflow-y-auto">
                                     <DialogTitle as="h3" class="text-xl font-medium leading-6 text-gray-100">
                                         <div>
                                             Preguntas para la encuesta: {{ currentSurvey.name }}
@@ -401,7 +439,7 @@ const submitDelete = () => {
                                                 <!-- Botón para agregar una nueva opción -->
                                                 <button
                                                     type="button"
-                                                    class="ml-2 bg-primary text-white rounded-full p-2 hover:bg-teal-900"
+                                                    class="ml-2 bg-primary text-white rounded-full p-2 hover:bg-blue-900"
                                                     @click="addOption(qIndex)"
                                                 >
                                                     <PlusIcon class="h-5 w-5" />
@@ -412,7 +450,7 @@ const submitDelete = () => {
                                         <!-- Botón para agregar una nueva pregunta -->
                                         <button
                                             type="button"
-                                            class="mt-4 bg-primary text-white rounded-full px-4 py-2 hover:bg-teal-900"
+                                            class="mt-4 bg-primary text-white rounded-full px-4 py-2 hover:bg-blue-900"
                                             @click="addQuestion"
                                         >
                                             <PlusIcon class="h-5 w-5 inline-block mr-2" /> Agregar pregunta
@@ -428,7 +466,7 @@ const submitDelete = () => {
                                         </button>
                                         <button
                                             type="button"
-                                            class="inline-flex justify-center rounded-full bg-primary px-6 py-2 text-sm font-medium text-white hover:bg-teal-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                                            class="inline-flex justify-center rounded-full bg-primary px-6 py-2 text-sm font-medium text-white hover:bg-blue-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                                             @click="submitQuestions"
                                         >
                                             Guardar

@@ -22,8 +22,8 @@ class QuestionFactory extends Factory
     public function definition(): array
     {
         return [
-            'title' => $this->faker->sentence(5), // Question text
-            'survey_id' => Survey::factory(), // Relationship with Survey
+            'title' => $this->faker->sentence(5),
+            'survey_id' => Survey::factory(),
         ];
     }
 }

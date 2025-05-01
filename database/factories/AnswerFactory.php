@@ -25,10 +25,10 @@ class AnswerFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => User::factory(),          // Relationship with the user
-            'survey_id' => Survey::factory(),      // Relation to the survey
-            'question_id' => Question::factory(),  // Relation to the question
-            'option_id' => Option::factory(),      // Relation to the selected option
+            'user_id' => User::factory(),
+            'survey_id' => Survey::factory(),
+            'question_id' => Question::factory(),
+            'option_id' => Option::factory(),
         ];
     }
 }

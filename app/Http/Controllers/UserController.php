@@ -12,13 +12,17 @@ class UserController extends Controller
     public function index()
     {
         try {
-            $users = User::all();
+            // Cargar todos los usuarios junto con las encuestas que han contestado (sin duplicados)
+            $users = User::with(['answers' => function ($query) {
+                $query->select('user_id', 'survey_id')->distinct();
+            }, 'answers.survey'])->get();
+
             return Inertia::render('Users/Index', [
                 'users' => $users
             ]);
         } catch (\Exception $e) {
             Log::error('Error al cargar la lista de usuarios: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Ocurrió un error al cargar la lista de usuarios.');
+            return response()->json(['success' => false, 'message' => 'Ocurrió un error al cargar la lista de usuarios.'], 500);
         }
     }
 
@@ -43,11 +47,14 @@ class UserController extends Controller
             ]);
 
             User::create($validatedData);
-            return redirect()->back()
-                ->with('message', 'Usuario creado exitosamente.');
+
+            $users = User::with(['answers' => function ($query) {
+                $query->select('user_id', 'survey_id')->distinct();
+            }, 'answers.survey'])->get();
+            return response()->json(['success' => true, 'message' => 'Usuario creado exitosamente.', 'users' => $users]);
         } catch (\Throwable $e) {
             Log::error('Error al crear el usuario: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Ocurrió un error al crear el usuario.');
+            return response()->json(['success' => false, 'message' => 'Ocurrió un error al crear el usuario.'], 500);
         }
     }
 
@@ -70,11 +77,13 @@ class UserController extends Controller
 
             $user->update($validatedData);
 
-            return redirect()->back()
-                ->with('message', 'Usuario actualizado exitosamente.');
+            $users = User::with(['answers' => function ($query) {
+                $query->select('user_id', 'survey_id')->distinct();
+            }, 'answers.survey'])->get();
+            return response()->json(['success' => true, 'message' => 'Usuario actualizado exitosamente.', 'users' => $users]);
         } catch (\Throwable $e) {
             Log::error('Error al actualizar el usuario: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Ocurrió un error al actualizar el usuario.');
+            return response()->json(['success' => false, 'message' => 'Ocurrió un error al actualizar el usuario.'], 500);
         }
     }
 
@@ -84,11 +93,14 @@ class UserController extends Controller
             $user = User::findOrFail($request->id);
 
             $user->delete();
-            return redirect()->back()
-                ->with('message', 'Usuario eliminado exitosamente.');
+
+            $users = User::with(['answers' => function ($query) {
+                $query->select('user_id', 'survey_id')->distinct();
+            }, 'answers.survey'])->get();
+            return response()->json(['success' => true, 'message' => 'Usuario eliminado exitosamente.', 'users' => $users]);
         } catch (\Throwable $e) {
             Log::error('Error al eliminar el usuario: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Ocurrió un error al eliminar el usuario.');
+            return response()->json(['success' => false, 'message' => 'Ocurrió un error al eliminar el usuario.'], 500);
         }
     }
 }

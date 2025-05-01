@@ -13,22 +13,22 @@ class Survey extends Model
     protected $fillable = ['name', 'state'];
 
     protected $casts = [
-        'state' => 'boolean', // Automatically converts 0 and 1 to false and true
+        'state' => 'boolean', // Convierte automáticamente 0 y 1 en falso y verdadero
     ];
 
-    // Relationship to questions
+    // Relación con las preguntas
     public function questions()
     {
         return $this->hasMany(Question::class, 'survey_id');
     }
 
-    // Relationship with the answers
+    // Relación con las respuestas
     public function answers()
     {
         return $this->hasMany(Answer::class, 'survey_id');
     }
 
-    // Overwrite the update method
+    // Sobrescribir el método de actualización
     public function update(array $attributes = [], array $options = [])
     {
         if ($this->answers()->exists()) {

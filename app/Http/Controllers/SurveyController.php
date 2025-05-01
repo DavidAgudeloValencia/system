@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Survey;
-use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
@@ -13,25 +12,25 @@ class SurveyController extends Controller
     public function index()
     {
         try {
-            $surveys = Survey::with('questions.options')->get(); // Cargar preguntas y opciones asociadas
+            $surveys = Survey::with('questions.options')->get();
             return Inertia::render('Surveys/Index', [
                 'surveys' => $surveys,
             ]);
         } catch (\Exception $e) {
             Log::error('Error al cargar la lista de encuestas: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Ocurrió un error al cargar la lista de encuestas.');
+            return response()->json(['success' => false, 'message' => 'Ocurrió un error al cargar la lista de encuestas.'], 500);
         }
     }
 
     public function show($id)
     {
-        $survey = Survey::find($id);
-
-        if (!$survey) {
-            return response()->json(['message' => 'Survey not found'], 404);
+        try {
+            $survey = Survey::with('questions.options')->findOrFail($id);
+            return response()->json(['success' => true, 'survey' => $survey]);
+        } catch (\Exception $e) {
+            Log::error('Error al cargar la encuesta: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Encuesta no encontrada.'], 404);
         }
-
-        return response()->json($survey);
     }
 
     public function store(Request $request)
@@ -44,11 +43,11 @@ class SurveyController extends Controller
 
             Survey::create($validatedData);
 
-            return redirect()->route('surveys.index')
-                ->with('message', 'Encuesta creada exitosamente.');
+            $surveys = Survey::with('questions.options')->get(); // Obtener todas las encuestas actualizadas
+            return response()->json(['success' => true, 'message' => 'Encuesta creada exitosamente.', 'surveys' => $surveys]);
         } catch (\Throwable $e) {
             Log::error('Error al crear la encuesta: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Ocurrió un error al crear la encuesta.');
+            return response()->json(['success' => false, 'message' => 'Ocurrió un error al crear la encuesta.'], 500);
         }
     }
 
@@ -64,11 +63,11 @@ class SurveyController extends Controller
 
             $survey->update($validatedData);
 
-            return redirect()->route('surveys.index')
-                ->with('message', 'Encuesta actualizada exitosamente.');
+            $surveys = Survey::with('questions.options')->get(); // Obtener todas las encuestas actualizadas
+            return response()->json(['success' => true, 'message' => 'Encuesta actualizada exitosamente.', 'surveys' => $surveys]);
         } catch (\Throwable $e) {
             Log::error('Error al actualizar la encuesta: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Ocurrió un error al actualizar la encuesta.');
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 
@@ -78,11 +77,12 @@ class SurveyController extends Controller
             $survey = Survey::findOrFail($request->id);
 
             $survey->delete();
-            return redirect()->back()
-                ->with('message', 'Encuesta eliminada exitosamente.');
+
+            $surveys = Survey::with('questions.options')->get(); // Obtener todas las encuestas actualizadas
+            return response()->json(['success' => true, 'message' => 'Encuesta eliminada exitosamente.', 'surveys' => $surveys]);
         } catch (\Throwable $e) {
             Log::error('Error al eliminar la encuesta: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Ocurrió un error al eliminar la encuesta.');
+            return response()->json(['success' => false, 'message' => 'Ocurrió un error al eliminar la encuesta.'], 500);
         }
     }
 }

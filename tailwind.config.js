@@ -18,17 +18,17 @@ export default {
                 sans: ['Figtree', ...defaultTheme.fontFamily.sans],
             },
             colors: {
-                primary: '#4c37c0',
-                secondary: '#FF8500',
+                primary: '#4C6EF5',
+                secondary: '#D64545',
                 success: '#066839',
-                danger: '#7C162E',
+                danger: '#FF6B6B',
                 warning: '#E47311',
                 info: '#114477',
                 light: '#07C8F9',
-                dark: '#110E1B',
-                muted: '#4e4b6a',
+                dark: '#2E2E3A',
+                muted: '#2C2C3E',
                 focus: '#7929E8',
-                white: '#e6e6e6'
+                white: '#e5e7eb'
             }
         },
     },

@@ -22,8 +22,8 @@ class SurveyFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => $this->faker->sentence(3), // Survey name
-            'state' => $this->faker->boolean,   // Status: active/inactive
+            'name' => $this->faker->sentence(3),
+            'state' => $this->faker->boolean,
         ];
     }
 }
